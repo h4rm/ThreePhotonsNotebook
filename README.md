@@ -3,7 +3,7 @@ IJulia Notebook accompanying the following paper:
 In addition to the dependencies below, you will have to install the [ThreePhotons.jl](https://github.com/h4rm/ThreePhotons.jl) package (not listed in the Official Julia Repository).
 
 Dependencies
-############
+=============
 
 * IJulia.jl
 * PyPlot.jl
@@ -23,7 +23,7 @@ You can install the dependencies via:
 ```
 
 Running the Notebook
-#####################
+=====================
 
 You can run the notebook by
 

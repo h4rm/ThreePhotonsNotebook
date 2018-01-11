@@ -551,7 +551,42 @@ cross_sections_incoh_5kev = Dict("H"=>barn_to_nm2(0.51), "C"=>barn_to_nm2(1.98),
 """
 area: photons per nm^2 area
 """
-function calculate_scattered_photons(pdb::String="../structures/crambin.pdb"; area::Float64=(100.0/2.0)^2*pi, beam_photons::Float64=5.0e11)
+function calculate_scattered_photons(pdb::String="../structures/crambin.pdb"; area::Float64=(100.0e-9/2.0)^2*pi, beam_photons::Float64=5.0e11)
+    fluence_CFEL = beam_photons / area
+    println("Fluence ($(fluence_CFEL)), area ($(area)), beam photons ($beam_photons)")
+    println("Processing $pdb")
+    #Atom numbers
+    molecule = loadPDB(pdb)
+
+    count = (t) -> sum([molecule[i].t==t for i = 1:length(molecule)])
+    atom_numbers = Dict( "C"=>count("C"), "N"=>count("N"), "O"=>count("O"))
+
+    cubesize = 80
+    rmax = 30.0e-10 # 30 A
+    densCube = getDensityCube(molecule, cubesize, rmax)
+    fourierCube = forward(densCube)
+
+    I_0 = fluence_CFEL
+    wavelength = 2.5e-10 # 2.5 A
+    pixel_size = 250.0e-6 #250 mu m
+    detector_distance = 100.0e-3 # 100 mm
+    F0 = sqrt(I_0)*2*pi/wavelength^2
+    dx = 2*rmax / (cubesize-1)
+    Omega_p = pixel_size^2 / detector_distance^2
+    #qmap_scaled = dx * qmap / (2. * numpy.pi)
+    F = F0 * fourierCube.cube/length(fourierCube.cube) * dx^3 * sqrt(Omega_p)
+
+    scattered_photons_coherent = sumabs(F.^2)
+
+    println("Coherent photons: $scattered_photons_coherent")
+
+end
+
+#Parameters taken from: A comprehensive simulation framework for imaging single particles and biomolecules at the European X-ray Free-Electron Laser, http://www.nature.com/articles/srep24791
+"""
+area: photons per nm^2 area
+"""
+function calculate_scattered_photons_old_naive(pdb::String="../structures/crambin.pdb"; area::Float64=(100.0/2.0)^2*pi, beam_photons::Float64=5.0e11)
     fluence_CFEL = beam_photons / area
     println("Fluence ($(fluence_CFEL)), area ($(area)), beam photons ($beam_photons)")
     println("Processing $pdb")

@@ -1,19 +1,26 @@
 using PyCall, PyPlot
+using Images
 using LaTeXStrings
 using ThreePhotons
+using Interact
 
 """Plots random 2 photon correlation slices"""
-function plot_random_2photon_slices(c2list::Dict; normalization=false, list=[random_doublet(25) for i = 1:20])
-    for i = 1:length(list)
-        k1 = list[i][1]
-        k2 = list[i][2]
+function plot_random_2photon_slices(c2list::Dict)
+    f = figure()
+    N,K,_ = Base.size(c2list[collect(keys(c2list))[1]])
+    @manipulate for k1=1:K,k2=1:K,normalization=true;
+        plot_single_2photon_slice(c2list, k1, k2, f, normalization)
+    end
+end
 
-        figure(i)
+function plot_single_2photon_slice(c2list::Dict, k1::Int64, k2::Int64, f=figure(), normalization=true)
+    withfig(f) do
+        N,K,_ = Base.size(c2list[collect(keys(c2list))[1]])
+        x = linspace(0,pi,N)
         for name in keys(c2list)
           slice = real(c2list[name][:,k2,k1])
-
           if normalization slice /= sumabs(slice) end
-          plot(slice,"-o", label=name)
+          plot(x,slice,"-o", label=name)
         end
 
         title(latexstring("2 Photon Correlation \$k_1=$k1, k_2=$k2\$"))
@@ -24,45 +31,43 @@ function plot_random_2photon_slices(c2list::Dict; normalization=false, list=[ran
 end
 
 """Plots random 3 photon correlation slices"""
-function plot_random_3photon_slices(c3list::Dict; list=[random_triplet(25) for i = 1:20], integrate=false,  normalization=false)
+function plot_random_3photon_slices(c3list::Dict, GaussianKernel::Float64=0.0)
+    c3names = collect(keys(c3list))
+    c3num = length(c3names)
+    N,_,K,_,_ = Base.size(c3list[c3names[1]])
+    f2 = figure()
+#     x = linspace(0,pi,N)
 
-  for i = 1:length(list)
-      k1 = list[i][1]
-      k2 = list[i][2]
-      k3 = list[i][3]
+    @manipulate for k1=1:K,k2=1:K,k3=1:K,normalization=true;
+        withfig(f2) do
+            axslice = subplot2grid((3,c3num),(0,0),colspan=c3num)
+            aximshow = [ subplot2grid((3,c3num),(1,i-1),rowspan=2,colspan=1) for i = 1:c3num]
 
-      figure(2*i)
-      for (j,name) in enumerate(keys(c3list))
-        slice = real(c3list[name][:,:,k3,k2,k1])
-        if normalization slice /= sumabs(slice) end
+            for (j,name) in enumerate(keys(c3list))
+                slab = real(c3list[name][:,:,k3,k2,k1])
+                if normalization slab /= sumabs(slab) end
 
-        #Plot slices
-        set_cmap("hot")
-        subplot(1,length(keys(c3list)),j)
-        imshow(slice, extent=[0, pi, 0, pi])
-        clim(minimum(slice), maximum(slice))
-        title(latexstring("$name\n\$k_1=$k1\,k_2=$k2\,k_3=$k3\$"))
-        xlabel(L"\alpha")
-        ylabel(L"\beta")
-        grid(false)
-      end
+                if GaussianKernel > 0.0
+                    img = convert(Images.Image,convert(Array{Float64},slab))
+                    slab = imfilter(img, Kernel.gaussian(GaussianKernel));
+                end
 
-      figure(2*i+1)
-      for (j,name) in enumerate(keys(c3list))
-        slice = real(c3list[name][:,:,k3,k2,k1])
-        if normalization slice /= sumabs(slice) end
+                #Plot slabs
+                aximshow[j][:imshow](slab, extent=[0, pi, 0, pi], cmap="hot")
+                aximshow[j][:set_xticks]([])
+                aximshow[j][:get_yaxis]()[:set_visible](false)
+                aximshow[j][:set_xlabel](name)
+                #               axslice[:set_clim](minimum(slice), maximum(slice))
+                axslice[:set_title](latexstring("\$k_1=$k1\,k_2=$k2\,k_3=$k3\$"))
+                #             axslice[:set_xlabel](L"\alpha=\beta [rad]")
 
-        #plot diagonales
-        plot( diag(slice), "-o", label=name)
-      end
-
-      xlabel(L"\alpha=\beta [rad]")
-      ylabel("t")
-      title(latexstring("3 Photon Correlation \$k_1=$k1 k_2=$k2 k_3=$k3\$"))
-      legend()
-
+                axslice[:grid](false)
+                axslice[:plot](diag(slab), "-o", label=name)
+            end
+        end
     end
 end
+
 
 """Plots an array of 2D-points as 2D scatter plot"""
 function plotPoints2D(points)
@@ -87,26 +92,29 @@ end
 
 """From an intensity cube, generates scattering data and plots it"""
 #noise::Noise=GaussianNoise(0.0, 0.0, false)
-function plot_scattering_image(intensity::CubeVolume; number_incident_photons::Integer=10000, qcut_ratio::Float64=0.83, point_size::Float64=50.0, colorfill="red", coloredge="black")
+function plot_scattering_image(intensity::CubeVolume; number_incident_photons::Integer=10000, qmax::Float64=1.0, point_size::Float64=50.0, colorfill="red", coloredge="black", background::Bool=true)
 
-    local qmax = intensity.rmax*qcut_ratio
     # noisy_intensity = get_noisy_intensity(intensity, noise)
     noisy_intensity = intensity
     p,rot = pointsPerOrientation(noisy_intensity, qmax,qmax/3.0, number_incident_photons)
 
     #Plot underlying intensity
-    r = linspace(-qmax, qmax, noisy_intensity.cubesize)
-    myslice = Float64[getVolumeInterpolated(noisy_intensity, rot*[-x,y,0]) for x=r,y=r]
-    myslice = (myslice).^(0.2)
-    # myslice = log(max(myslice, 1e-6))
-    # myslice = log(myslice)
-    fig = imshow(myslice, interpolation="hermite", extent=[-qmax, qmax, -qmax, qmax], cmap="Blues")
-
-    #Plot scattering photons
-    scatter( [p[i][2] for i=1:length(p)], [ p[i][1] for i=1:length(p)], c=colorfill, s=point_size, alpha=1.0, edgecolors=coloredge)#
+    if background
+        r = linspace(-qmax, qmax, noisy_intensity.cubesize)
+        myslice = Float64[getVolumeInterpolated(noisy_intensity, rot*[-x,y,0]) for x=r,y=r]
+        myslice = (myslice).^(0.2)
+        # myslice = log(max(myslice, 1e-6))
+        # myslice = log(myslice)
+        fig = imshow(myslice, interpolation="hermite", extent=[-qmax, qmax, -qmax, qmax], cmap="Blues")
+    end
 
     #plot center
-    scatter([0.0], [0.0], marker="+", alpha=1.0, s=100.0, color="red")
+    fig = scatter([0.0], [0.0], marker="+", alpha=1.0, s=30.0, color="grey")
+    xlim(-qmax,qmax)
+    ylim(-qmax,qmax)
+    gca()[:set_aspect]("equal", adjustable="box")
+    #Plot scattering photons
+    scatter( [p[i][2] for i=1:length(p)], [ p[i][1] for i=1:length(p)], c=colorfill, s=point_size, alpha=1.0, edgecolors=coloredge)#
 
     fig[:axes][:get_xaxis]()[:set_visible](false)
     fig[:axes][:get_yaxis]()[:set_visible](false)
@@ -129,11 +137,11 @@ function compare_histogram_with_theory(histograms::Dict=Dict(), N::Int64=32, K::
     histolist_c3 = Dict()
     histolist_c2 = Dict()
     for (name,file) in histograms
-        _,c2,_,c3 = loadHistograms(K,file)
+        _,c2,_,c3 = loadHistograms(K,K,file)
         histolist_c3[name] = c3
         histolist_c2[name] = c2
     end
-    basis = complexBasis(L,N,25)
+    basis = calculate_basis(L,25, N, K)
 
     if ctype=="c3"
         c3list = Dict( name=>FullCorrelation_parallized(volume, basis, K, true, true) for (name,volume) in volumes)

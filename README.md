@@ -4,6 +4,13 @@ In addition to the dependencies below, you will have to install the [https://git
 
 The data that is analyzed in this notebook is not yet released.
 
+Content
+=============
+
+* *Paper.ipynb* - Main IJulia notebook with many of the necessary data processing steps. A lot of the code for postprocessing has been put into `paper.jl` (in the directory) and `data_processing.jl` in the ThreePhoton.jl package.
+* *Paper_revision.ipynb* - Data processing discussed in the revision of the paper, including experimental data (Coliphage_PR772), multi-particle processing and Ewald sphere approximations.
+* *Beamstop.ipynm* - Calculations concering the beamstop, both in synthetic experiments and real experimental images.
+
 Dependencies
 =============
 

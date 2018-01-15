@@ -2,7 +2,7 @@ Supplementary IJulia Notebook for the paper "*Structure determination from singl
 
 In addition to the dependencies below, you will have to install the [https://github.com/h4rm/ThreePhotons.jl](https://github.com/h4rm/ThreePhotons.jl) package (not listed in the Official Julia Repository).
 
-The data that is analyzed in this notebook is not yet released.
+The Crambin data that is analyzed in this notebook is not yet released, but can be reproduced with the job scripts under `jobs/run_generate_histograms.jl` and `jobs/run_parallel_determination.jl`.
 
 Content
 =============
@@ -39,7 +39,7 @@ You can install the dependencies via:
 Running the Notebook
 =====================
 
-You can run the notebook by
+You can run the notebook by executing
 
 ```julia
 using IJulia

@@ -1,4 +1,4 @@
-Supplementary IJulia Notebook for the paper "*Structure determination from single molecule X-ray scattering with three photons per image*".
+Supplementary IJulia Notebook for the paper ["*Structure determination from single molecule X-ray scattering with three photons per image*"](https://www.nature.com/articles/s41467-018-04830-4).
 
 In addition to the dependencies below, you will have to install the [https://github.com/h4rm/ThreePhotons.jl](https://github.com/h4rm/ThreePhotons.jl) package (not listed in the Official Julia Repository).
 

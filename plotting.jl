@@ -19,7 +19,7 @@ function plot_single_2photon_slice(c2list::Dict, k1::Int64, k2::Int64, f=figure(
         x = linspace(0,pi,N)
         for name in keys(c2list)
           slice = real(c2list[name][:,k2,k1])
-          if normalization slice /= sumabs(slice) end
+          if normalization slice /= sum(abs, slice) end
           plot(x,slice,"-o", label=name)
         end
 
@@ -45,7 +45,7 @@ function plot_random_3photon_slices(c3list::Dict, GaussianKernel::Float64=0.0)
 
             for (j,name) in enumerate(keys(c3list))
                 slab = real(c3list[name][:,:,k3,k2,k1])
-                if normalization slab /= sumabs(slab) end
+                if normalization slab /= sum(abs, slab) end
 
                 if GaussianKernel > 0.0
                     img = convert(Images.Image,convert(Array{Float64},slab))
@@ -85,7 +85,7 @@ function plotPointCloud(points)
   #     append!(points, p)
   # end
 
-  # colors = [qmax/sumabs(points[i]) for i = 1:length(points)]
+  # colors = [qmax/sum(abs, points[i]) for i = 1:length(points)]
   clf()
   scatter3D( [points[i][1] for i=1:length(points)], [ points[i][2]for i=1:length(points)], [ points[i][3]for i=1:length(points)], s=0.1)
 end
@@ -125,11 +125,11 @@ function compare_c2_grid(a::C2, b::C2)
     ac = complete_two_photon_correlation(a)
     bc = complete_two_photon_correlation(b)
 
-    ratios = Float64[100.0*mean(ac[:,k2,k1]-bc[:,k2,k1]).^2/sumabs(ac[:,k2,k1]) for k1 = 1:K, k2=1:K]
+    ratios = Float64[100.0*mean(ac[:,k2,k1]-bc[:,k2,k1]).^2/sum(abs, ac[:,k2,k1]) for k1 = 1:K, k2=1:K]
     imshow(ratios, interpolation="none", extent=[1,K,K,1])
     title("Average Deviation [%]")
     colorbar()
-    println("Difference: $(100.0*sumabs((ac-bc).^2)/sumabs(ac))")
+    println("Difference: $(100.0*sum(abs, (ac-bc).^2)/sum(abs, ac))")
 end
 
 """Compares a list of histograms visually"""

@@ -18,8 +18,8 @@ colormodelarray = (num) -> [reshape(colormodel(num)[i,:],3) for i = 1:num]
 colormodelarray2 = (num) -> [reshape(sns.cubehelix_palette(num)[i,:],3) for i = 1:num]
 
 function plot_compare_intensity_cubes_plane(cube1::CubeVolume, cube2::CubeVolume;filename="paper/intensity_compare_x.pdf")
-  c1 = real(max(abs(cube1.cube/sumabs(cube1.cube)), eps(Float64)))
-  c2 = real(max(abs(cube2.cube/sumabs(cube2.cube)), eps(Float64)))
+  c1 = real(max(abs(cube1.cube/sum(abs, cube1.cube)), eps(Float64)))
+  c2 = real(max(abs(cube2.cube/sum(abs, cube2.cube)), eps(Float64)))
 
   cubesize = cube1.cubesize
   half = ceil(Integer, cubesize/2)
@@ -62,8 +62,8 @@ function plot_compare_intensity_cubes_plane(cube1::CubeVolume, cube2::CubeVolume
 end
 
 function plot_compare_intensity_cubes_linear(cube1::CubeVolume, cube2::CubeVolume; filename="paper/intensity_compare_x_slice.pdf", cube1_name="Reconstruction", cube2_name="Reference")
-    c1 = real(max(abs(cube1.cube/sumabs(cube1.cube)), eps(Float64)))
-    c2 = real(max(abs(cube2.cube/sumabs(cube2.cube)), eps(Float64)))
+    c1 = real(max(abs(cube1.cube/sum(abs, cube1.cube)), eps(Float64)))
+    c2 = real(max(abs(cube2.cube/sum(abs, cube2.cube)), eps(Float64)))
 
     cubesize = cube1.cubesize
     half = ceil(Integer, cubesize/2)
@@ -110,7 +110,7 @@ function plot_compare_intensities_linear(intensity_list::Array{Dict{String,Any},
     xs = (collect(range)-half)*dr(cube1)
 
     plot_noise_slice = function(noise::CubeVolume, label, color, linestyle)
-      cn = real(max(abs(noise.cube/sumabs(noise.cube)), eps(Float64)))
+      cn = real(max(abs(noise.cube/sum(abs, noise.cube)), eps(Float64)))
       slicen = log(reshape(cn[range,range,half], size, size))
       plot(xs,reshape(slicen[newhalf+1,:], size), color=color, ls=linestyle, label=label)
     end
@@ -160,7 +160,7 @@ end
 
 # FSC plots
 
-function plot_sc(sc::Array{Float64}, sc_stderr::Array{Float64}, K::Integer, dq::Float64; label="", color="blue", ytext="Correlation", linestyle="-", plot_legend=true)
+function plot_sc(sc::Array{Float64}, sc_stderr::Array{Float64}, K::Integer, dq::Float64; label="", color="blue", ytext="Correlation", linestyle="-", plot_legend=true, upper_y_limit::Float64=1.0)
     if length(sc) == 0 return end
     q = get_qrange(K, dq)
 
@@ -169,7 +169,7 @@ function plot_sc(sc::Array{Float64}, sc_stderr::Array{Float64}, K::Integer, dq::
     xlabel("Wave Number k [1/Å]")
     ylabel(ytext)
     xlim(dq,dq*K)
-    ylim(0.0, 1.0)
+    ylim(0.0, upper_y_limit)
     if plot_legend
         l = legend(loc="upper center", bbox_to_anchor=(0.5, -0.16), ncol=2, frameon=true, fancybox=true, framealpha=1.0)
     end
@@ -544,6 +544,9 @@ barn_to_nm2 = (x) -> x* 1e-24 * 1.0e14 # [barn/atom] to [cm^2/atom] and then [cm
 cross_sections_5kev = Dict("H"=>barn_to_nm2(0.13), "C"=>barn_to_nm2(7.21), "N"=>barn_to_nm2(11.1), "O"=>barn_to_nm2(16.4))
 cross_sections_incoh_5kev = Dict("H"=>barn_to_nm2(0.51), "C"=>barn_to_nm2(1.98), "N"=>barn_to_nm2(2.23), "O"=>barn_to_nm2(2.32))
 
+"""Calculates the pulse energy (mJ) with the number of photons and the beam energy (eV)"""
+photon_count_to_pulse_energy = (number_of_photons::Float64, photon_energy::Float64) -> number_of_photons*photon_energy*1.60218e-19*1e3
+
 #@ 10 keV
 # cross_sections_10kev = Dict("C"=>barn_to_nm2(3.248), "N"=>barn_to_nm2(4.722), "O"=>barn_to_nm2(6.805))
 
@@ -576,13 +579,15 @@ function calculate_scattered_photons(pdb::String="../structures/crambin.pdb"; ar
     #qmap_scaled = dx * qmap / (2. * numpy.pi)
     F = F0 * fourierCube.cube/length(fourierCube.cube) * dx^3 * sqrt(Omega_p)
 
-    scattered_photons_coherent = sumabs(F.^2)
+    scattered_photons_coherent = sum(abs, F.^2)
 
     println("Coherent photons: $scattered_photons_coherent")
 
 end
 
+
 #Parameters taken from: A comprehensive simulation framework for imaging single particles and biomolecules at the European X-ray Free-Electron Laser, http://www.nature.com/articles/srep24791
+#Detector Distance: 64mm - Reference detector distance from Large Pixel Detector (LPD) Parameters (https://www.xfel.eu/sites/sites_custom/site_xfel/content/e35165/e46561/e46879/e59227/e59229/xfel_file59230/FXE-Poster2017-01-16_eng.pdf)
 """
 area: photons per nm^2 area
 """
@@ -692,7 +697,7 @@ function calculate_optimal_parameter_ratio(intensity::CubeVolume, unknown_range:
         intensity_quality = cubeToSphericalHarmonics(intensity, K, Int64(L+1))
         intensity_quality_cube = getCube(intensity_quality, intensity.cubesize)
         # rmax = K*(2*pi/intensity.rmax)
-        c = sumabs(shell_correlation_ISC(intensity, intensity_quality_cube))
+        c = sum(abs, shell_correlation_ISC(intensity, intensity_quality_cube))
         # println("L=$L, K=$K, dq=$(dq(intensity_quality)), c=$(c)")
         if c > bestc
             bestc = c
